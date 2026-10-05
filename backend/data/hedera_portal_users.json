@@ -1,0 +1,32 @@
+{
+  "_comment": "Simulated Hedera Portal users for EnerX Hackathon MVP. This replaces real-world wallet popups and mobile signatures with an explicit, demonstrable mock user directory.",
+  "users": [
+    {
+      "portal_id": "portal_001",
+      "hedera_account_id": "0.0.510001",
+      "name": "Alice Solar",
+      "email": "alice@enerx.solar",
+      "role": "owner",
+      "is_verified": true,
+      "virtual_balance": 1500.0
+    },
+    {
+      "portal_id": "portal_002",
+      "hedera_account_id": "0.0.510002",
+      "name": "Bob Green",
+      "email": "bob@investor.org",
+      "role": "investor",
+      "is_verified": true,
+      "virtual_balance": 10000.0
+    },
+    {
+      "portal_id": "portal_003",
+      "hedera_account_id": "0.0.510003",
+      "name": "Carol Ray",
+      "email": "carol@investor.org",
+      "role": "investor",
+      "is_verified": false,
+      "virtual_balance": 2500.0
+    }
+  ]
+}

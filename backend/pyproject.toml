@@ -1,5 +1,5 @@
 [project]
-name = "enerx"
+name = "backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,11 +7,21 @@ authors = [
     { name = "rayen-segni", email = "snrayen8@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "alembic>=1.20.0",
+    "fastapi[all]>=0.142.2",
+    "hiero-sdk-python>=0.2.10",
+    "jose>=1.0.0",
+    "psycopg[binary]>=3.3.6",
+]
 
 [project.scripts]
-enerx = "enerx:main"
+backend = "backend:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
+
+# Add this line to disable package auto-discovery:
+[tool.uv]
+package = false

@@ -1,0 +1,35 @@
+{
+  "_comment": "Simulated solar power production data for EnerX Hackathon MVP. Represents historical daily/period solar energy output (kWh) for projects.",
+  "production_periods": [
+    {
+      "date": "2026-10-01",
+      "energy_kwh": 500.0,
+      "tariff_rate_usd": 0.15,
+      "estimated_revenue_usd": 75.0
+    },
+    {
+      "date": "2026-10-02",
+      "energy_kwh": 620.0,
+      "tariff_rate_usd": 0.15,
+      "estimated_revenue_usd": 93.0
+    },
+    {
+      "date": "2026-10-03",
+      "energy_kwh": 450.0,
+      "tariff_rate_usd": 0.15,
+      "estimated_revenue_usd": 67.5
+    },
+    {
+      "date": "2026-10-04",
+      "energy_kwh": 580.0,
+      "tariff_rate_usd": 0.15,
+      "estimated_revenue_usd": 87.0
+    },
+    {
+      "date": "2026-10-05",
+      "energy_kwh": 640.0,
+      "tariff_rate_usd": 0.15,
+      "estimated_revenue_usd": 96.0
+    }
+  ]
+}
