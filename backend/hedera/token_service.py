@@ -88,3 +88,34 @@ def transfer_tokens(
         "transaction_id": transaction_id,
         "status": str(receipt.status),
     }
+
+
+def transfer_tokens_between_accounts(
+    hedera_token_id: str,
+    seller_account_id: str,
+    seller_private_key: str,
+    buyer_account_id: str,
+    token_amount: int,
+) -> dict[str, str]:
+    """Transfer whole tokens from a seller to a buyer on Hedera."""
+    client = get_client()
+    token_id = TokenId.from_string(hedera_token_id)
+    seller_id = AccountId.from_string(seller_account_id)
+    seller_key = PrivateKey.from_string_ecdsa(seller_private_key)
+    buyer_id = AccountId.from_string(buyer_account_id)
+    amount_in_smallest_units = token_amount * 10**2
+    
+    transfer_tx = (
+        TransferTransaction()
+        .add_token_transfer(token_id, seller_id, -amount_in_smallest_units)
+        .add_token_transfer(token_id, buyer_id, amount_in_smallest_units)
+        .freeze_with(client)
+    )
+    transaction_id = str(transfer_tx.transaction_id)
+    transfer_tx.sign(seller_key)
+    receipt = transfer_tx.execute(client)
+
+    return {
+        "transaction_id": transaction_id,
+        "status": str(receipt.status),
+    }
