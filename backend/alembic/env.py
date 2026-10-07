@@ -11,15 +11,16 @@ import sys
 # Ensure application package is on sys.path
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.config import get_settings
+from app.database import DATABASE_URL
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
+
+
 # Dynamically set the database URL from EnerX settings
-settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.alembic_database_url)
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

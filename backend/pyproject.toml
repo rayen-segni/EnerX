@@ -10,7 +10,8 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.20.0",
     "fastapi[all]>=0.142.2",
-    "hiero-sdk-python>=0.2.10",
+    "hiero-did-sdk-python==0.1.7",
+    "hiero-sdk-python==0.2.2",
     "jose>=1.0.0",
     "psycopg[binary]>=3.3.6",
 ]

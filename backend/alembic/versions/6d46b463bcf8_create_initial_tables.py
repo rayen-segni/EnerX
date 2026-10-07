@@ -30,6 +30,7 @@ def upgrade() -> None:
         legal_name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         phone VARCHAR(50),
+        balance integer NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -39,7 +40,6 @@ def upgrade() -> None:
         name VARCHAR(255) NOT NULL,
         description TEXT,
         target_amount INT NOT NULL,
-        funded_amount INT NOT NULL DEFAULT 0,
         status project_status NOT NULL DEFAULT 'funding',
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
@@ -48,6 +48,8 @@ def upgrade() -> None:
         id SERIAL PRIMARY KEY,
         project_id INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
         hedera_token_id VARCHAR(255) NOT NULL,
+        token_name VARCHAR(255) NOT NULL,
+        token_symbol VARCHAR(50) NOT NULL,
         total_supply INT NOT NULL,
         initial_price NUMERIC(15, 2) NOT NULL,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -78,7 +80,6 @@ def upgrade() -> None:
         token_id INT NOT NULL REFERENCES tokens(id) ON DELETE CASCADE,
         user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         amount INT NOT NULL DEFAULT 0,
-        ownership_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
         PRIMARY KEY (token_id, user_id)
     );
 

@@ -1,0 +1,16 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+
+# Virtual Environments
+.venv/
+
+# Environment and Secrets
+.env
+.env.*
+
+# IDEs
+.vscode/
+.fastapicloud/
+
+

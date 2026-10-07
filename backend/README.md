@@ -20,6 +20,8 @@ This repository contains the **modular monolith FastAPI backend** designed for t
    - For hackathon demonstration reliability, real wallet popups / QR extensions are avoided.
    - Simulated Portal users are defined in [`data/hedera_portal_users.json`](data/hedera_portal_users.json).
    - Each portal user has an associated `hedera_account_id` and verified status.
+   - `POST /auth/did` accepts `user_id`, `legal_name`, `email`, and `hedera_id`, creates a DID operation on HCS, and stores the DID in that user's `users.did` field. The identity values must match the database user. This mock flow uses a request-body `user_id`; it is not a substitute for production authentication.
+   - DIDs created by this endpoint are controlled by the configured backend Ed25519 operator key. The DID document is public on HCS; legal name and email are not published.
 
 3. **Primary Investment**:
    - Investors purchase available campaign tokens using simulated virtual balance (`/balance`).
