@@ -1,15 +1,87 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from psycopg import Connection
 from psycopg.errors import IntegrityError
 
 from app.database import get_db
 from app.schemas.auth import UserPatchRequest, UserResponse
+from app.schemas.user import UserDetailsResponse
 
 router = APIRouter(prefix="/user", tags=["Users"])
 
 
+@router.get("/{user_id}", response_model=UserDetailsResponse)
+def get_user(
+    user_id: int,
+    connection: Connection = Depends(get_db),
+):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, hedera_id, did, legal_name, email, phone, balance, created_at
+            FROM users
+            WHERE id = %s
+            """,
+            (user_id,),
+        )
+        user = cursor.fetchone()
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User {user_id} was not found",
+            )
+
+        cursor.execute(
+            """
+            SELECT
+                tb.id,
+                tb.token_id,
+                tb.amount,
+                t.hedera_token_id,
+                t.token_name,
+                t.token_symbol,
+                p.id AS project_id,
+                p.name AS project_name
+            FROM token_balances AS tb
+            JOIN tokens AS t ON t.id = tb.token_id
+            JOIN projects AS p ON p.id = t.project_id
+            WHERE tb.user_id = %s
+            ORDER BY tb.token_id
+            """,
+            (user_id,),
+        )
+        token_balances = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT
+                p.id,
+                p.owner_id,
+                p.name,
+                p.description,
+                p.target_amount,
+                p.status,
+                t.id AS token_id,
+                t.hedera_token_id,
+                t.token_name,
+                t.token_symbol,
+                t.total_supply,
+                p.commitment_file_id,
+                p.commitment_transaction_id
+            FROM projects AS p
+            JOIN tokens AS t ON t.project_id = p.id
+            WHERE p.owner_id = %s
+            ORDER BY p.id
+            """,
+            (user_id,),
+        )
+        projects = cursor.fetchall()
+
+    return {
+        **dict(user),
+        "token_balances": token_balances,
+        "projects": projects,
+    }
 
 
 @router.patch("", response_model=UserResponse)
@@ -56,4 +128,3 @@ def update_user(
         )
 
     return user
-

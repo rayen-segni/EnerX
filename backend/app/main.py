@@ -5,7 +5,15 @@ EnerX Backend - FastAPI Application Entry Point
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import auth, project, investments, user, marketplace
+from app.routes import(
+                        auth,
+                        project,
+                        investments,
+                        user,
+                        marketplace,
+                        production,
+                        model
+    )
 
 app = FastAPI(
     title="EnerX Backend",
@@ -27,6 +35,8 @@ app.include_router(project.router)
 app.include_router(investments.router)
 app.include_router(user.router)
 app.include_router(marketplace.router)
+app.include_router(production.router)
+app.include_router(model.router)
 
 @app.get("/", tags=["System"])
 def root():

@@ -1,6 +1,7 @@
 """Authentication-related request and response schemas."""
 
 import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -23,7 +24,7 @@ class UserPatchRequest(BaseModel):
     legal_name: str | None = None
     email: str | None = None
     phone: str | None = None
-    balance: int | None = None
+    balance: Decimal | None = Field(default=None, max_digits=15, decimal_places=2)
 
 
 
@@ -34,5 +35,5 @@ class UserResponse(BaseModel):
     legal_name: str
     email: str
     phone: str | None
-    balance: int
+    balance: Decimal
     created_at: datetime.datetime

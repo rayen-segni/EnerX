@@ -28,7 +28,7 @@ def upgrade() -> None:
         hedera_id VARCHAR(255) UNIQUE NOT NULL,
         did VARCHAR(255) UNIQUE,
         legal_name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE,
         phone VARCHAR(50),
         balance integer NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -47,6 +47,7 @@ def upgrade() -> None:
     CREATE TABLE tokens (
         id SERIAL PRIMARY KEY,
         project_id INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         hedera_token_id VARCHAR(255) NOT NULL,
         token_name VARCHAR(255) NOT NULL,
         token_symbol VARCHAR(50) NOT NULL,
@@ -106,7 +107,6 @@ def upgrade() -> None:
         offered_tokens INT NOT NULL
     );
     """)
-
 
 def downgrade() -> None:
     """Downgrade schema."""

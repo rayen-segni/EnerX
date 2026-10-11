@@ -78,15 +78,25 @@ contract RevenueDistribution {
         require(totalAmount > 0, "Total amount must be greater than zero");
 
         uint256 totalTokens = 0;
-        distributionId = nextDistributionId++;
+        uint256 totalAllocated = 0;
 
         for (uint256 i = 0; i < recipients.length; i++) {
             totalTokens += tokenAmounts[i];
-            uint256 payout = (totalAmount * tokenAmounts[i]) / 100;
-            emit RecipientPayout(distributionId, recipients[i], tokenAmounts[i], payout);
+            totalAllocated += (totalAmount * tokenAmounts[i]) / 100;
         }
 
         require(totalTokens == 100, "Project tokens must sum exactly to 100 (100% ownership)");
+
+        uint256 remainingUnits = totalAmount - totalAllocated;
+        distributionId = nextDistributionId++;
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            uint256 payout = (totalAmount * tokenAmounts[i]) / 100;
+            if (i < remainingUnits) {
+                payout += 1;
+            }
+            emit RecipientPayout(distributionId, recipients[i], tokenAmounts[i], payout);
+        }
 
         distributions[distributionId] = DistributionRecord({
             distributionId: distributionId,

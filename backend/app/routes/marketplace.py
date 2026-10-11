@@ -3,7 +3,12 @@ from psycopg import Connection
 from decimal import Decimal
 
 from app.database import get_db
-from app.schemas.marketplace import MarketplaceListingCreateRequest, MarketplacePurchaseRequest, MarketplacePurchaseResponse
+from app.schemas.marketplace import (
+    MarketplaceListingCreateRequest,
+    MarketplaceListingResponse,
+    MarketplacePurchaseRequest,
+    MarketplacePurchaseResponse,
+)
 from hedera.token_service import transfer_tokens_between_accounts
 from app.config import settings
 
@@ -12,6 +17,7 @@ router = APIRouter(prefix="/marketplace", tags=["Marketplace"])
 
 @router.post(
     "/list",
+    response_model=MarketplaceListingResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_listing(
@@ -45,9 +51,25 @@ def create_listing(
             """
             INSERT INTO token_listings (tk_balance, unit_price, offered_tokens)
             VALUES (%s, %s, %s)
+            RETURNING id
             """,
             (token_balance["id"], request.u_price, request.amount),  #type: ignore
         )
+        listing = cursor.fetchone()
+
+    if listing is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not create marketplace listing",
+        )
+
+    return {
+        "id": listing["id"],  # type: ignore[index]
+        "user_id": request.user_id,
+        "token_id": request.token_id,
+        "u_price": request.u_price,
+        "amount": request.amount,
+    }
 
 @router.post(
     "/list/buy",
@@ -61,6 +83,29 @@ def purchase_listing(
     
     # Fetch the listing and its associated token balance and token data, locking the rows for update.
     with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT token.project_id
+            FROM token_listings AS listing
+            JOIN token_balances AS seller_balance
+                ON seller_balance.id = listing.tk_balance
+            JOIN tokens AS token ON token.id = seller_balance.token_id
+            WHERE listing.id = %s
+            """,
+            (request.listing_id,),
+        )
+        listing_project = cursor.fetchone()
+        if listing_project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Listing {request.listing_id} was not found",
+            )
+
+        cursor.execute(
+            "SELECT id FROM projects WHERE id = %s FOR UPDATE",
+            (listing_project["project_id"],),  # type: ignore[index]
+        )
+
         cursor.execute(
             """
             SELECT
@@ -128,14 +173,6 @@ def purchase_listing(
         
 
         amount_paid = Decimal(str(listing["unit_price"])) * request.amount #type: ignore
-        # users.balance is an integer column, so reject fractional currency amounts
-        # instead of allowing PostgreSQL to round them during the update.
-        if amount_paid != amount_paid.to_integral_value():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="The total price must be a whole number with the current integer balance schema",
-            )
-
         # Check if the buyer has enough balance to pay for the tokens
         if buyer["balance"] < amount_paid: #type: ignore
             raise HTTPException(
@@ -171,11 +208,11 @@ def purchase_listing(
         # Update the buyer's and seller's balances and token balances
         cursor.execute(
             "UPDATE users SET balance = balance - %s WHERE id = %s",
-            (int(amount_paid), request.user_id),
+            (amount_paid, request.user_id),
         )
         cursor.execute(
             "UPDATE users SET balance = balance + %s WHERE id = %s",
-            (int(amount_paid), listing["seller_id"]), #type: ignore
+            (amount_paid, listing["seller_id"]), #type: ignore
         )
 
         # Update the token balances for both the buyer and seller
@@ -197,16 +234,6 @@ def purchase_listing(
             (listing["token_id"], request.user_id, request.amount), #type: ignore
         )
         
-        # Update the investment of the buyer in the investments table
-        cursor.execute(
-            """
-            UPDATE investments
-            SET token_amount = amount_paid - %s, token_amount = token_amount - %s
-            WHERE id = %s
-            """,
-            (int(amount_paid), int(amount_paid), investment["id"], request.amount), #type: ignore
-        )
-
         # Record the investment and the token transaction in the database
         cursor.execute(
             """

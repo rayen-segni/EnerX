@@ -1,0 +1,33 @@
+{
+    "record_type": "EnerX simulated solar project owner commitment",
+    "schema_version": 1,
+    "is_simulated": true,
+    "recorded_at": "2026-10-11T14:05:57.771475+00:00",
+    "project": {
+        "id": 82,
+        "name": "Test Project",
+        "description": "Hello Everyone",
+        "funding_target": 1
+    },
+    "owner": {
+        "user_id": 3,
+        "hedera_account_id": "0.0.10872211",
+        "acknowledgement_type": "simulated project-launch acknowledgement"
+    },
+    "token": {
+        "name": "Testing",
+        "symbol": "TEST",
+        "hedera_token_id": "0.0.10989077",
+        "total_supply": 100
+    },
+    "simulated_solar_equipment": {
+        "panel_model": "SIMULATED 550 W monocrystalline PV panel",
+        "quantity": 12,
+        "rated_capacity_kw": 6.6,
+        "supplier": "SIMULATED supplier; no real vendor confirmed",
+        "installation_site": "Not provided; simulated project data",
+        "procurement_status": "SIMULATED; not purchased, delivered, or installed"
+    },
+    "owner_commitment": "For this hackathon MVP demonstration, the owner identified by owner.user_id acknowledges the intention to use project funds raised for the solar-panel equipment and installation described in simulated_solar_equipment and to follow the project data recorded here.",
+    "disclaimer": "This public record contains simulated demonstration data only. It is not evidence of a real purchase, supplier confirmation, installation, or independent verification. The API records a simulated acknowledgement; the owner does not cryptographically sign this HFS file."
+}

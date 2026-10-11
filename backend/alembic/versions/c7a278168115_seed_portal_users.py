@@ -10,6 +10,7 @@ import os
 from typing import Sequence, Union
 
 from alembic import op
+from app.config import settings
 
 # revision identifiers, used by Alembic.
 revision: str = 'c7a278168115'
@@ -42,6 +43,10 @@ def upgrade() -> None:
                 '{user['email']}',
                 NULL
             )
+            ON CONFLICT (id) DO NOTHING;
+            
+            INSERT INTO users (id, hedera_id, did, legal_name, email, phone)
+            VALUES (0, '{settings.OPERATOR_ID}', NULL, 'Operator', NULL, NULL)
             ON CONFLICT (id) DO NOTHING;
             """
         )

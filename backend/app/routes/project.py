@@ -4,6 +4,7 @@ from psycopg import Connection
 from app.config import settings
 from app.database import get_db
 from app.schemas.project import ProjectCreateRequest, ProjectCreateResponse, ProjectResponse
+from hedera.file_service import create_project_commitment
 from hedera.token_service import create_token
 
 router = APIRouter(prefix="/project", tags=["Projects"])
@@ -59,22 +60,61 @@ def create_project(
                 detail=f"Could not create Hedera token: {exc}",
             ) from exc
 
+        # The HFS file is public and immutable; its equipment and owner
+        # acknowledgement are explicitly simulated for this hackathon MVP.
+        try:
+            commitment = create_project_commitment(
+                project_id=int(project["id"]),  # type: ignore[index]
+                owner_user_id=request.user_id,
+                owner_hedera_id=str(user["hedera_id"]),  # type: ignore[index]
+                project_name=request.name,
+                project_description=request.description,
+                funding_target=request.target_amount,
+                token_name=request.token_name,
+                token_symbol=request.token_symbol,
+                hedera_token_id=hedera_token_id,
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=(
+                    "Could not create the simulated Hedera File Service "
+                    f"commitment: {exc}"
+                ),
+            ) from exc
+
+        cursor.execute(
+            """
+            UPDATE projects
+            SET commitment_file_id = %s,
+                commitment_transaction_id = %s
+            WHERE id = %s
+            """,
+            (
+                commitment["file_id"],
+                commitment["transaction_id"],
+                project["id"],  # type: ignore[index]
+            ),
+        )
+
         # Insert the token into the database.
         cursor.execute(
             """
             INSERT INTO tokens (
                 project_id,
+                user_id,
                 hedera_token_id,
                 token_name,
                 token_symbol,
                 total_supply,
                 initial_price
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
                 project["id"],  # type: ignore
+                request.user_id,
                 hedera_token_id,
                 request.token_name,
                 request.token_symbol,
@@ -110,6 +150,8 @@ def create_project(
         "token_name": request.token_name,
         "token_symbol": request.token_symbol,
         "total_supply": 30,
+        "commitment_file_id": commitment["file_id"],
+        "commitment_transaction_id": commitment["transaction_id"],
     }
 
 @router.get("/{owner_id}", response_model=list[ProjectResponse])
@@ -129,6 +171,8 @@ def get_project(
                 t.token_symbol,
                 t.id AS token_id,
                 t.total_supply AS token_supply,
+                p.commitment_file_id,
+                p.commitment_transaction_id,
                 p.target_amount,
                 p.status
             FROM projects AS p
@@ -163,6 +207,8 @@ def get_projects(connection: Connection = Depends(get_db)):
                 t.token_symbol,
                 t.id AS token_id,
                 t.total_supply AS token_supply,
+                p.commitment_file_id,
+                p.commitment_transaction_id,
                 p.target_amount,
                 p.status
             FROM projects AS p

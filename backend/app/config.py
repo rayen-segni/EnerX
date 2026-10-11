@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     HEDERA_USER_1_KEY: str
     HEDERA_USER_2_KEY: str
     HEDERA_USER_3_KEY: str
+    HEDERA_REVENUE_CONTRACT_ID: str | None = None
     
     # Data Paths
     PORTAL_USERS_PATH: str = "data/hedera_portal_users.json"
