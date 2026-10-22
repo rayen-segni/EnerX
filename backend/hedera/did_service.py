@@ -1,15 +1,21 @@
 from hiero_did_sdk_python import HederaDid
-
+from fastapi import HTTPException, status
 from hedera.client import get_client
 
 
-async def create_user_did(user: dict):
+async def create_user_did(*, private_key_der: str, profile_url: str) -> str:
+    """Register a DID and expose the user's profile endpoint as a DID service."""
+    if not private_key_der:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="HEDERA_OPERATOR_KEY_DER is not configured",
+        )
+
     client = get_client()
 
-    # This key identifies this user’s DID.
     did = HederaDid(
         client=client,
-        private_key_der=user["did_private_key_der"],
+        private_key_der=private_key_der,
     )
 
     await did.register()
@@ -17,7 +23,7 @@ async def create_user_did(user: dict):
     await did.add_or_update_service(
         id_=f"{did.identifier}#service-1",
         service_type="Profile", #type: ignore
-        service_endpoint=user["profile_url"],
+        service_endpoint=profile_url,
     )
 
-    return did.identifier
+    return did.identifier #type: ignore

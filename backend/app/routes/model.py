@@ -61,6 +61,3 @@ def get_forecast(
         news_coef = news["news_coef"]
     return aggregator.build_report(pred, lat, lon, capacity_kw, tariff, n_tokens, news_coef, news,
                                     warnings=warnings)
-
-
-
