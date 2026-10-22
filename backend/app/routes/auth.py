@@ -85,7 +85,7 @@ async def create_did(
 
         try:
             did = await create_user_did(
-                private_key_der=settings.HEDERA_OPERATOR_KEY_DER or "",
+                private_key_hex=settings.OPERATOR_KEY,
                 profile_url=f"{settings.DID_SERVICE_ENDPOINT}/user/{request.user_id}",
             )
         except HTTPException:
@@ -106,4 +106,3 @@ async def create_did(
         )
 
     return {"user_id": request.user_id, "did": did}
-

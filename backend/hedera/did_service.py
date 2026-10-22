@@ -1,15 +1,26 @@
-from hiero_did_sdk_python import HederaDid
 from fastapi import HTTPException, status
+from hiero_sdk_python import PrivateKey
+from hiero_did_sdk_python import HederaDid
+
 from hedera.client import get_client
 
 
-async def create_user_did(*, private_key_der: str, profile_url: str) -> str:
-    """Register a DID and expose the user's profile endpoint as a DID service."""
-    if not private_key_der:
+async def create_user_did(*, private_key_hex: str, profile_url: str) -> str:
+    """Register a DID from an ECDSA HEX key and expose its profile service."""
+    if not private_key_hex:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="HEDERA_OPERATOR_KEY_DER is not configured",
+            detail="OPERATOR_KEY is not configured",
         )
+
+    try:
+        private_key = PrivateKey.from_string_ecdsa(private_key_hex)
+        private_key_der = private_key.to_string_der()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"OPERATOR_KEY is not a valid ECDSA HEX key: {exc}",
+        ) from exc
 
     client = get_client()
 
