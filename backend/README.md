@@ -239,7 +239,7 @@ fastapi dev app/main.py
 
 ## 🌐 API Reference for Front-End Developers
 
-The examples below use `https://enerx.fastapicloud.dev` as the base URL. The API currently has no bearer-token authentication; `/auth/{user_id}` is a simulated portal-user lookup, not an authorization mechanism. Send and receive JSON with `Content-Type: application/json` for requests with a body. IDs and token counts are integers; monetary amounts and energy measurements support decimal values.
+The examples below use `https://enerxv.fastapicloud.dev` as the base URL. The API currently has no bearer-token authentication; `/auth/{user_id}` is a simulated portal-user lookup, not an authorization mechanism. Send and receive JSON with `Content-Type: application/json` for requests with a body. IDs and token counts are integers; monetary amounts and energy measurements support decimal values.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
@@ -274,7 +274,7 @@ The examples below use `https://enerx.fastapicloud.dev` as the base URL. The API
 
 Unknown IDs return `404`. The returned `user_id` is the app's simulated identity; the portal record is not proof that the caller is that user.
 
-`POST /auth/did` accepts `user_id`, `legal_name`, `email`, and `hedera_id` (a Hedera account ID such as `0.0.123456`). Although the request/response schema is defined, the route is currently a stub and does not create a DID. Do not rely on this endpoint until it is implemented.
+`POST /auth/did` accepts `user_id`, `legal_name`, `email`, and `hedera_id` (a Hedera account ID such as `0.0.123456`). For the hackathon MVP, matching these values creates or reuses the DID and marks the User identity as verified. The same single verification enables both investing and project-owner actions; separate investor/owner credentials are not required in this MVP.
 
 ### Projects and investments
 
@@ -361,10 +361,10 @@ FastAPI validation errors use status `422`; application errors generally return 
 
 Once the server is running, open your browser:
 
-- **Swagger UI**: [http://https://enerx.fastapicloud.dev/docs](http://https://enerx.fastapicloud.dev/docs)
-- **ReDoc**: [http://https://enerx.fastapicloud.dev/redoc](http://https://enerx.fastapicloud.dev/redoc)
-- **API Status**: [http://https://enerx.fastapicloud.dev/](http://https://enerx.fastapicloud.dev/)
-- **API Root**: [http://https://enerx.fastapicloud.dev/](http://https://enerx.fastapicloud.dev/)
+- **Swagger UI**: [https://enerxv.fastapicloud.dev/docs](https://enerxv.fastapicloud.dev/docs)
+- **ReDoc**: [https://enerxv.fastapicloud.dev/redoc](https://enerxv.fastapicloud.dev/redoc)
+- **API Status**: [https://enerxv.fastapicloud.dev/](https://enerxv.fastapicloud.dev/)
+- **API Root**: [https://enerxv.fastapicloud.dev/](https://enerxv.fastapicloud.dev/)
 
 ---
 
@@ -385,5 +385,5 @@ pytest tests/
 | **HTS** (Token Service) | `app/hedera/token_service.py` | Fractional project tokens (100 total: 30 owner, 70 investors). |
 | **HFS** (File Service) | `app/hedera/file_service.py` | Immutable owner-project commitment agreement. |
 | **HSCS** (Smart Contracts) | `app/hedera/contract_service.py` | Executes revenue distribution according to current token holdings. |
-| **DID** (Identity) | `app/hedera/did_service.py` | Verifies user credentials before creating projects, investing, or trading. |
+| **DID** (Identity) | `app/hedera/did_service.py` | One MVP User verification enables creating projects, investing, and trading. |
 | **Simulated Portal** | `app/hedera/wallet_service.py` | Deterministic user account & Hedera Account ID lookup for hackathon demo. |

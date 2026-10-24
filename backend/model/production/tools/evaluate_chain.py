@@ -29,11 +29,12 @@ import pandas as pd
 import requests
 from sklearn.metrics import mean_absolute_error
 
-import model.forecast as forecast
+from production import forecast
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(HERE, "dataset_solar_global_tunisie.csv")
-CACHE_DIR = os.path.join(HERE, "om_cache")
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # dossier production/
+DATA_DIR = os.path.join(HERE, "data")
+CSV_PATH = os.path.join(DATA_DIR, "dataset_solar_global_tunisie.csv")
+CACHE_DIR = os.path.join(DATA_DIR, "om_cache")
 
 SOURCES = {
     "archive": "https://archive-api.open-meteo.com/v1/archive",
@@ -136,7 +137,7 @@ def main(source="archive"):
     print("MAE par ville (chaine reelle) :")
     par_ville = test.groupby("ville").apply(
         lambda g: mean_absolute_error(g["production"], g["pred_chain"]), include_groups=False)
-    for ville, m in par_ville.sort_values().items():  #type: ignore
+    for ville, m in par_ville.sort_values().items():
         print(f"   {ville:<10} {m:.2f}")
 
     # --- 2. Intervalle : absolu et relatif, calibres sur 2022, verifies sur 2023 ---
@@ -163,7 +164,7 @@ def main(source="archive"):
         "note": ("Meteo historique : mesure l'ecart de source meteo + modele, PAS l'erreur de prevision "
                  "a plusieurs jours (plus grande)."),
     }
-    out = os.path.join(HERE, "chain_calibration.json")
+    out = os.path.join(DATA_DIR, "chain_calibration.json")
     with open(out, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
     print(f"\nSauvegarde : {out}\nRedemarre l'API (uvicorn) pour utiliser le nouvel intervalle.")

@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+# 33 MB dataset: regenerate it, do not commit
+production/data/dataset_solar_global_tunisie.csv
+# Open-Meteo call cache (evaluate_chain.py)
+production/data/om_cache/
+# collected news cache
+news/data/news_headlines.json

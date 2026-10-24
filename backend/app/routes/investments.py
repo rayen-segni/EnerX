@@ -53,7 +53,19 @@ def create_investment(
         # Fetch the investing user's Hedera account ID and balance, locking the row for update.
         cursor.execute(
             """
-            SELECT id, hedera_id, balance
+            SELECT
+                id,
+                hedera_id,
+                balance,
+                identity_verified,
+                EXISTS (
+                    SELECT 1
+                    FROM verifiable_credentials vc
+                    WHERE vc.subject_user_id = users.id
+                      AND vc.credential_type = 'InvestorVerification'
+                      AND vc.revoked_at IS NULL
+                      AND vc.expires_at > CURRENT_TIMESTAMP
+                ) AS investor_verified
             FROM users
             WHERE id = %s
             FOR UPDATE
@@ -65,6 +77,11 @@ def create_investment(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"User {request.user_id} was not found",
+            )
+        if not user["identity_verified"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="A verified user identity is required to invest",
             )
 
         # Calculate the amount to be paid by the user for the requested token amount.
@@ -210,4 +227,3 @@ def get_investments(
         investments = cursor.fetchall()
 
     return investments
-

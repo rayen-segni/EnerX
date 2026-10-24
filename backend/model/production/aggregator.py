@@ -9,9 +9,32 @@ avant cette version ne correspond plus : regenerer les rapports et prevenir le d
 import hashlib
 import json
 import math
+import os
 from datetime import datetime, timezone
 
-import model.forecast as forecast
+from . import forecast
+
+FX_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "fx_rate.json")
+
+
+def load_fx(path=FX_FILE):
+    """Taux TND -> USDC fige dans le rapport (et donc dans le hash). Retourne (fx, avertissement).
+    Le taux vient d'un fichier maintenu par l'equipe : valeur, source, date, statut (EXEMPLE / OFFICIEL).
+    Le frontend ne doit JAMAIS convertir lui-meme : il affiche les champs *_usdc du rapport."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            fx = json.load(f)
+        rate = float(fx["rate"])
+        if not (0 < rate < 10) or not math.isfinite(rate):
+            raise ValueError("taux hors plage")
+        out = {"from": "TND", "to": "USDC", "rate": rate, "source": str(fx["source"]),
+               "date": str(fx["date"]), "status": str(fx.get("status", "NON PRECISE"))}
+        warn = None
+        if out["status"].upper() != "OFFICIEL":
+            warn = ("Taux de change TND/USDC non officiel (statut : %s) : montants USDC indicatifs." % out["status"])
+        return out, warn
+    except (OSError, KeyError, ValueError, TypeError) as e:
+        return None, f"Taux de change TND/USDC indisponible ({e.__class__.__name__}) : montants USDC absents."
 
 # Tarifs d'achat STEG du photovoltaique (DT/kWh, hors taxes), selon la capacite du projet.
 # Source : arrete publie au JORT, rapporte par managers.tn le 14 octobre 2024.
@@ -27,13 +50,20 @@ def steg_tariff(capacity_kw):
 
 
 def build_report(pred, lat, lon, capacity_kw, tariff=None, n_tokens=1000, news_coef=1.0,
-                 news=None, warnings=None, interval_source=None):
+                 news=None, warnings=None, interval_source=None, fx=None):
     """
     pred : DataFrame avec colonnes date, temperature, irradiance, kwh, low, high
            (sortie de forecast.predict_days)
     warnings : liste de textes (forecast.quality_warnings) -> incluse dans le rapport et le hash
     """
     tariff = steg_tariff(capacity_kw) if tariff is None else tariff
+    warnings = list(warnings or [])
+    if fx is None:
+        from . import fx as fxlive                     # taux en direct, repli sur fx_rate.json
+        fx, fx_warn = fxlive.get_fx(load_fx)
+        if fx_warn:
+            warnings.append(fx_warn)
+    rate = fx["rate"] if fx else None
     if interval_source is None:
         interval_source = forecast.interval_source()
 
@@ -54,6 +84,13 @@ def build_report(pred, lat, lon, capacity_kw, tariff=None, n_tokens=1000, news_c
             "dividend_per_token_low_dt": round(rev_low / n_tokens, 6),
             "dividend_per_token_high_dt": round(rev_high / n_tokens, 6),
         })
+        if rate:
+            days[-1].update({
+                "revenue_usdc": round(rev * rate, 4),
+                "dividend_per_token_usdc": round(rev * rate / n_tokens, 6),
+                "dividend_per_token_low_usdc": round(rev_low * rate / n_tokens, 6),
+                "dividend_per_token_high_usdc": round(rev_high * rate / n_tokens, 6),
+            })
 
     total_kwh = sum(d["kwh"] for d in days)
     total_rev = sum(d["revenue_dt"] for d in days)
@@ -78,6 +115,11 @@ def build_report(pred, lat, lon, capacity_kw, tariff=None, n_tokens=1000, news_c
             "dividend_per_token_dt": round(total_rev / n_tokens, 6),
         },
     }
+    if fx:
+        report["assumptions"]["fx"] = fx
+        total_usdc = sum(d["revenue_usdc"] for d in days)
+        report["totals"]["revenue_usdc"] = round(total_usdc, 4)
+        report["totals"]["dividend_per_token_usdc"] = round(total_usdc / n_tokens, 6)
     if warnings:
         report["warnings"] = list(warnings)
     if news is not None:

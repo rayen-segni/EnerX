@@ -13,7 +13,7 @@ import time
 
 import requests
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # dossier production/
 BASE_URL = "https://re.jrc.ec.europa.eu/api/v5_3/seriescalc"
 
 VILLES = {
@@ -48,7 +48,7 @@ for ville, (lat, lon) in VILLES.items():
     time.sleep(2)
 
 if len(resultats) == len(VILLES):
-    chemin = os.path.join(HERE, "pvgis_tilts.json")
+    chemin = os.path.join(HERE, "data", "pvgis_tilts.json")
     with open(chemin, "w", encoding="utf-8") as f:
         json.dump(resultats, f, indent=2, ensure_ascii=False)
     tilts = sorted(v["tilt"] for v in resultats.values())

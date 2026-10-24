@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     HEDERA_USER_2_KEY: str
     HEDERA_USER_3_KEY: str
     HEDERA_REVENUE_CONTRACT_ID: str | None = None
-    DID_SERVICE_ENDPOINT: str = "https://enerx.fastapicloud.dev"
+    DID_SERVICE_ENDPOINT: str = "https://enerxv.fastapicloud.dev"
+    VERIFICATION_ISSUER_TOKEN: str | None = None
     
     # Data Paths
     PORTAL_USERS_PATH: str = "data/hedera_portal_users.json"

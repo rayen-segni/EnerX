@@ -19,9 +19,9 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import StandardScaler
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(HERE, "dataset_solar_global_tunisie.csv")   # dans le meme dossier que le script
-OUTPUT_DIR = HERE
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # dossier production/
+CSV_PATH = os.path.join(HERE, "data", "dataset_solar_global_tunisie.csv")   # dans le meme dossier que le script
+OUTPUT_DIR = os.path.join(HERE, "reports")
 
 # Noms exacts de la colonne "ville" de ton CSV
 VILLES_CACHEES = ["Tataouine", "Kasserine", "Bizerte", "Tozeur"]

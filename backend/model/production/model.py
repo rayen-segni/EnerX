@@ -3,7 +3,7 @@ EnerX - Agent de prediction de production solaire (kWh/jour)
 Reseau de neurones : entrees -> 64 -> 32 -> 1 sortie
 
 Pipeline : chargement -> agregation par jour -> features -> split train/dev/test
-            -> normalisation -> entrainement -> evaluation -> intervalle -> sauvegarde
+           -> normalisation -> entrainement -> evaluation -> intervalle -> sauvegarde
 """
 import copy
 import os
@@ -20,8 +20,9 @@ from sklearn.preprocessing import StandardScaler
 # 0. CONFIGURATION (c'est ici que tu changes les choses)
 # ----------------------------------------------------------------------------
 HERE = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(HERE, "dataset_solar_global_tunisie.csv")   # dans le meme dossier que le script
-OUTPUT_DIR = HERE
+CSV_PATH = os.path.join(HERE, "data", "dataset_solar_global_tunisie.csv")   # dans le meme dossier que le script
+OUTPUT_DIR = os.path.join(HERE, "data")          # solar_agent.pkl
+REPORTS_DIR = os.path.join(HERE, "reports")       # graphiques / resultats
 
 # Split par DATE (dates de fin exclues). Pour 2019-2023 :
 #   train = 2019-2021 | dev = 2022 | test = 2023
@@ -29,7 +30,7 @@ TRAIN_UNTIL = "2022-01-01"
 DEV_UNTIL = "2023-01-01"
 
 BASE_CAPACITY_KW = 10        # capacite utilisee pour generer les donnees PVGIS
-HIDDEN_LAYERS = (128, 64, 32)     # On passe à 3 couches plus larges juste njareb et ça marche mieux que 2 couches plus petites (64, 32)
+HIDDEN_LAYERS = (128, 64, 32)     # 3 couches cachees : 128 -> 64 -> 32 neurones, puis 1 sortie (kWh/jour)
 MAX_EPOCHS = 500                 # On augmente le maximum d'époques
 PATIENCE = 40                    # On laisse plus de temps au modèle pour converger
 
@@ -88,12 +89,12 @@ X_test, y_test = test[FEATURES].values, test[TARGET].values
 # 5. NORMALISATION (fit UNIQUEMENT sur le train)
 # ----------------------------------------------------------------------------
 x_scaler = StandardScaler().fit(X_train)
-y_scaler = StandardScaler().fit(y_train.reshape(-1, 1)) #type: ignore
+y_scaler = StandardScaler().fit(y_train.reshape(-1, 1))
 
 X_train_s = x_scaler.transform(X_train)
 X_dev_s = x_scaler.transform(X_dev)
 X_test_s = x_scaler.transform(X_test)
-y_train_s = y_scaler.transform(y_train.reshape(-1, 1)).ravel() #type: ignore
+y_train_s = y_scaler.transform(y_train.reshape(-1, 1)).ravel()
 
 
 def predict_kwh(model, X_scaled):
@@ -119,7 +120,7 @@ model = MLPRegressor(
 best_model, best_dev_mae, wait = None, np.inf, 0
 for epoch in range(1, MAX_EPOCHS + 1):
     model.partial_fit(X_train_s, y_train_s)          # 1 epoque d'apprentissage
-    dev_mae = mean_absolute_error(y_dev, predict_kwh(model, X_dev_s)) #type: ignore
+    dev_mae = mean_absolute_error(y_dev, predict_kwh(model, X_dev_s))
 
     if dev_mae < best_dev_mae - 1e-4:                # amelioration -> on garde ce modele
         best_dev_mae, best_model, wait = dev_mae, copy.deepcopy(model), 0
@@ -139,8 +140,8 @@ model = best_model
 # ----------------------------------------------------------------------------
 print("5. Evaluation sur le jeu de TEST (donnees jamais vues)")
 pred_test = predict_kwh(model, X_test_s)
-mae_nn = mean_absolute_error(y_test, pred_test) #type: ignore
-r2_nn = r2_score(y_test, pred_test) #type: ignore
+mae_nn = mean_absolute_error(y_test, pred_test)
+r2_nn = r2_score(y_test, pred_test)
 
 # Baseline 1 : "demain = aujourd'hui" (production de la veille, meme ville)
 daily["veille"] = daily.groupby(["latitude", "longitude"])["production"].shift(1)
@@ -148,14 +149,14 @@ test_b = daily.loc[test.index].dropna(subset=["veille"])
 mae_persist = mean_absolute_error(test_b["production"], test_b["veille"])
 
 # Baseline 2 : regression lineaire simple (pour verifier que le reseau apporte quelque chose)
-lin = LinearRegression().fit(X_train_s, y_train) #type: ignore
-mae_lin = mean_absolute_error(y_test, np.maximum(lin.predict(X_test_s), 0)) #type: ignore
+lin = LinearRegression().fit(X_train_s, y_train)
+mae_lin = mean_absolute_error(y_test, np.maximum(lin.predict(X_test_s), 0))
 
 print(f"   Reseau de neurones : MAE = {mae_nn:.2f} kWh/jour | R2 = {r2_nn:.3f}")
 print(f"   Regression lineaire: MAE = {mae_lin:.2f} kWh/jour")
 print(f"   Baseline veille    : MAE = {mae_persist:.2f} kWh/jour")
-print(f"   Production moyenne : {y_test.mean():.1f} kWh/jour "  #type: ignore
-      f"(erreur relative du reseau : {100 * mae_nn / y_test.mean():.1f} %)") #type: ignore
+print(f"   Production moyenne : {y_test.mean():.1f} kWh/jour "
+      f"(erreur relative du reseau : {100 * mae_nn / y_test.mean():.1f} %)")
 
 test_eval = test.copy()
 test_eval["pred"] = pred_test
@@ -192,21 +193,21 @@ print(f"7. Modele sauvegarde : {bundle_path}")
 # 10. GRAPHIQUE POUR LE PITCH (reel vs prediction, 90 derniers jours du test)
 # ----------------------------------------------------------------------------
 try:
-    import matplotlib #type: ignore
+    import matplotlib
     matplotlib.use("Agg")
-    import matplotlib.pyplot as plt #type: ignore
+    import matplotlib.pyplot as plt
 
     g = test_eval[(test_eval["latitude"] == test_eval["latitude"].iloc[0])].tail(90)
     plt.figure(figsize=(10, 4))
     plt.plot(g["date"], g[TARGET], label="Reel (PVGIS)", color="#1f77b4")
     plt.plot(g["date"], g["pred"], label="Prediction du reseau", color="#ff7f0e")
     plt.fill_between(g["date"], g["pred"] + RES_LOW, g["pred"] + RES_HIGH,
-                        color="#ff7f0e", alpha=0.2, label="Intervalle 80 %")
+                     color="#ff7f0e", alpha=0.2, label="Intervalle 80 %")
     plt.ylabel("kWh / jour")
     plt.title("EnerX - production solaire : reel vs prediction (jeu de test)")
     plt.legend()
     plt.tight_layout()
-    png_path = os.path.join(OUTPUT_DIR, "resultat_test.png")
+    png_path = os.path.join(REPORTS_DIR, "resultat_test.png")
     plt.savefig(png_path, dpi=150)
     print(f"8. Graphique sauvegarde : {png_path}")
 except Exception as e:
@@ -245,4 +246,4 @@ if __name__ == "__main__":
     # Exemple : un jour d'ete a Tunis, centrale de 10 kW
     print("\nExemple de prediction :")
     print(predict_production(36.8065, 10.1815, temperature=28, irradiance=8000,
-                                date="2023-07-15", capacity_kw=10))
+                             date="2023-07-15", capacity_kw=10))

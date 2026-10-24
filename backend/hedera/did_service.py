@@ -6,7 +6,7 @@ from hedera.client import get_client
 
 
 async def create_user_did(*, private_key_hex: str, profile_url: str) -> str:
-    """Register a DID from an ECDSA HEX key and expose its profile service."""
+    """Register a DID from a user's Hedera key and expose its profile service."""
     if not private_key_hex:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -14,7 +14,7 @@ async def create_user_did(*, private_key_hex: str, profile_url: str) -> str:
         )
 
     try:
-        private_key = PrivateKey.from_string_ecdsa(private_key_hex)
+        private_key = PrivateKey.from_string(private_key_hex)
         private_key_der = private_key.to_string_der()
     except Exception as exc:
         raise HTTPException(
@@ -37,4 +37,4 @@ async def create_user_did(*, private_key_hex: str, profile_url: str) -> str:
         service_endpoint=profile_url,
     )
 
-    return did.identifier #type: ignore
+    return did.identifier

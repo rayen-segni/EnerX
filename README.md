@@ -1,3 +1,0 @@
-# EnerX
-
-## Hackathon Project

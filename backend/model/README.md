@@ -16,7 +16,7 @@ This repository contains the **AI agent module**: it forecasts the daily product
  Open-Meteo forecast --> daily temperature + irradiance
         |
         v
- Neural network (MLP 64-32-1) --> kWh/day  (+ 80 % error range)
+ Neural network (MLP 128-64-32-1) --> kWh/day  (+ 80 % error range)
         |
         v
  News agent (keywords or Claude LLM) --> coefficient 0.90 - 1.10 + risk level
@@ -44,7 +44,7 @@ Trained on 12 Tunisian cities, 2019–2023 (daily data). Split by date: train 20
 | Error range coverage (10th–90th percentile of dev errors) | 80 % of test days |
 | **Cities never seen in training** (Tataouine, Kasserine, Bizerte, Tozeur; test year only) | **0.85 kWh/day** (linear regression: 1.11) |
 
-Reproduce the last row with `python test_ville_cachee.py`.
+Reproduce the last row with `python -m production.tools.test_ville_cachee`.
 
 ## Limitations (please read)
 
@@ -63,21 +63,25 @@ Requires Python 3.10+.
 ```bash
 pip install -r requirements.txt
 cp .env.example .env        # then fill in your values (see below)
+# ALL commands are run from this folder (project root), with `python -m`
 
-# 1. (optional) rebuild the dataset and retrain
-python collect_data.py      # downloads PVGIS data -> dataset_solar_global_tunisie.csv
-python model.py             # trains the network -> solar_agent.pkl
+# 1. (optional) retrain the production model
+python -m production.model                    # trains the network -> production/data/solar_agent.pkl
 
 # 1b. recommended checks (internet needed)
-python check_pvgis_tilt.py  # real PVGIS tilt per city -> pvgis_tilts.json
-python evaluate_chain.py    # end-to-end error + calibrated interval -> chain_calibration.json
-python test_hash.py         # Python and JavaScript hashes must match
+python -m production.tools.check_pvgis_tilt   # real PVGIS tilt per city -> production/data/pvgis_tilts.json
+python -m production.tools.evaluate_chain     # end-to-end error + calibrated interval -> production/data/chain_calibration.json
+python -m hedera.check_hash                   # Python and JavaScript hashes must match
+python -m pytest -q tests                     # unit and robustness tests (no internet)
 
-# 2. run the API
-uvicorn api:app --reload    # docs: http://127.0.0.1:8000/docs
+# 2. news feed (optional, fills news/data/articles_steg.json)
+python -m news.run_pipeline
 
-# 3. run the end-to-end demo
-python demo.py
+# 3. run the API
+uvicorn api:app --reload --port 8001          # docs: http://127.0.0.1:8001/docs (the front expects port 8001)
+
+# 4. run the end-to-end demo
+python -m examples.demo
 ```
 
 The trained model `solar_agent.pkl` is included, so steps 1 can be skipped.
@@ -93,6 +97,7 @@ The trained model `solar_agent.pkl` is included, so steps 1 can be skipped.
 | `ENERX_STRICT_RANGE` | Optional: `1` makes the API refuse roofs outside the training area |
 
 Never commit `.env`. Only `.env.example` (placeholders) belongs in the repository.
+
 
 ## API
 
@@ -110,14 +115,19 @@ Never commit `.env`. Only `.env.example` (placeholders) belongs in the repositor
 
 The response contains, per day, `kwh`, `kwh_low`, `kwh_high`, `revenue_dt`, `dividend_per_token_dt` (+ low/high), then `totals`, an optional `news` block and `report_hash`. `GET /news` returns the news analysis alone, `GET /health` a status check.
 
+## USDC and news provenance
+
+- **USDC amounts are computed by the backend, not the frontend.** `aggregator.py` reads `fx_rate.json` (rate = USDC per 1 TND, source, date, status) and writes `revenue_usdc`, `dividend_per_token_usdc` (+ low/high) and the `assumptions.fx` block into the report, so the exchange rate is covered by `report_hash`. While `status` is not `OFFICIEL`, the report carries a warning. USDC is treated as 1 USD.
+- **News sources.** `news_headlines.json` items must carry a `source_url` on an allow-listed domain (e.g. TAP, Managers.tn, Business News). Items without a valid https source are rejected and listed under `news.rejected`. The allow-list is a design choice that limits invented or anonymous sources; it does not guarantee that a listed outlet is right. Without `news_headlines.json`, the agent runs on fictitious demo headlines, labelled as such.
+
 ## Hedera integration (HCS)
 
-Every report has a SHA-256 hash, computed over the canonical JSON: `report_hash` removed, every number replaced by a fixed-decimal string (6 decimals, trailing zeros removed: `5939.0` → `"5939"`, `0.00001` → `"0.00001"`), keys sorted, compact separators, UTF-8 (reference implementations: `aggregator.hash_report` in Python and `verify_hash.js` in Node.js; `python test_hash.py` checks both agree). `hcs_anchor.py` publishes this hash, with a few readable fields, as a message in an HCS topic:
+Every report has a SHA-256 hash, computed over the canonical JSON: `report_hash` removed, every number replaced by a fixed-decimal string (6 decimals, trailing zeros removed: `5939.0` → `"5939"`, `0.00001` → `"0.00001"`), keys sorted, compact separators, UTF-8 (reference implementations: `aggregator.hash_report` in Python and `verify_hash.js` in Node.js; `python -m hedera.check_hash` checks both agree). `hcs_anchor.py` publishes this hash, with a few readable fields, as a message in an HCS topic:
 
 ```bash
-python hcs_anchor.py create-topic              # once: creates the topic
-python hcs_anchor.py anchor demo_report.json   # anchors a report
-python hcs_anchor.py verify demo_report.json 1 # checks the report against message #1 (Mirror Node)
+python -m hedera.hcs_anchor create-topic              # once: creates the topic
+python -m hedera.hcs_anchor anchor examples/demo_report.json   # anchors a report
+python -m hedera.hcs_anchor verify examples/demo_report.json 1 # checks the report against message #1 (Mirror Node)
 ```
 
 Anyone can verify a report later: recompute its hash and compare it with the message on the Mirror Node. If a single number was changed, the hashes differ.
@@ -128,18 +138,33 @@ Example anchored message: [TODO: paste the HashScan link after the first success
 
 ## Repository layout
 
-| File | Role |
-|---|---|
-| `collect_data.py` | Downloads PVGIS hourly data for the 12 cities |
-| `model.py` | Aggregates by day, trains and saves the neural network |
-| `test_ville_cachee.py` | Leave-one-city-out generalization test |
-| `forecast.py` | Open-Meteo forecast -> daily features -> model prediction |
-| `aggregator.py` | Dividend per token, report and hash |
-| `news_agent.py` | News -> coefficient and risk level (keyword mode or Claude) |
-| `api.py` | FastAPI server used by the dashboard |
-| `check_pvgis_tilt.py` | Reads the real PVGIS tilt/azimuth per city |
-| `evaluate_chain.py` | Error with Open-Meteo weather + calibrated interval |
-| `verify_hash.js`, `test_hash.py` | Hash verification in JavaScript and Python cross-check |
-| `hcs_anchor.py` | Anchoring and verification on Hedera Consensus Service |
-| `demo.py` | End-to-end terminal demo |
-| `solar_agent.pkl` | Trained model, scalers and error range |
+```
+ai/
+├── api.py                    FastAPI entry point (GET /health, /forecast, /news)
+├── requirements.txt          .env.example   .gitignore
+├── production/               SOLAR PRODUCTION FORECAST -> dividend
+│   ├── forecast.py           Open-Meteo weather -> daily features -> model prediction
+│   ├── aggregator.py         dividend per token, report, SHA-256 hash
+│   ├── fx.py                 TND -> USDC rate (live, fallback data/fx_rate.json)
+│   ├── model.py              trains the neural network
+│   ├── data/                 solar_agent.pkl, fx_rate.json, pvgis_tilts.json, chain_calibration.json, dataset (csv)
+│   ├── reports/              training outputs (graphs, csv)
+│   └── tools/                check_pvgis_tilt.py, evaluate_chain.py, test_ville_cachee.py
+├── news/                     ENERGY NEWS (information only, never changes the numbers)
+│   ├── news_feed.py          what GET /news serves (reads data/articles_steg.json)
+│   ├── etape1_collecte.py    web collector       pertinence.py   relevance filter
+│   ├── nettoyer_articles.py  cleaning            injecter_steg.py  official STEG notices
+│   ├── run_pipeline.py       runs collect -> clean -> inject
+│   ├── news_fetch.py, news_agent.py   GDELT fallback (legacy)
+│   └── data/                 articles_steg.json (+ backup)
+├── hedera/                   HASH + ANCHORING ON HEDERA
+│   ├── hcs_anchor.py         publish / verify a report hash on HCS
+│   ├── verify_hash.js        JavaScript reference implementation
+│   ├── check_hash.py         Python vs JavaScript cross-check
+│   └── requirements-hedera.txt
+├── tests/                    pytest suite (robustness, relevance filter)
+├── examples/                 demo.py, demo_report.json
+└── docs/                     CHANGEMENTS_NEWS.md
+```
+
+Dependencies flow one way: `api.py` -> `production` and `news`; `hedera` -> `production`; nothing in `production` imports `news`.|

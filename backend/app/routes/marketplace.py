@@ -15,6 +15,33 @@ from app.config import settings
 router = APIRouter(prefix="/marketplace", tags=["Marketplace"])
 
 
+@router.get("/listings")
+def get_active_listings(
+    connection: Connection = Depends(get_db),
+):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                listing.id,
+                seller_balance.user_id,
+                seller_balance.token_id,
+                token.project_id,
+                listing.unit_price AS u_price,
+                listing.offered_tokens AS amount
+            FROM token_listings listing
+            JOIN token_balances seller_balance
+                ON seller_balance.id = listing.tk_balance
+            JOIN tokens token
+                ON token.id = seller_balance.token_id
+            WHERE listing.cancelled_at IS NULL
+              AND listing.offered_tokens > 0
+            ORDER BY listing.id DESC
+            """
+        )
+        return cursor.fetchall()
+
+
 @router.post(
     "/list",
     response_model=MarketplaceListingResponse,
@@ -27,17 +54,51 @@ def create_listing(
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id, amount
-            FROM token_balances
-            WHERE user_id = %s AND token_id = %s
-            FOR UPDATE
+            SELECT
+                tb.id,
+                tb.amount,
+                u.identity_verified,
+                EXISTS (
+                    SELECT 1
+                    FROM verifiable_credentials vc
+                    WHERE vc.subject_user_id = u.id
+                      AND vc.credential_type = 'InvestorVerification'
+                      AND vc.revoked_at IS NULL
+                      AND vc.expires_at > CURRENT_TIMESTAMP
+                ) AS investor_verified
+            FROM token_balances tb
+            JOIN users u ON u.id = tb.user_id
+            WHERE tb.user_id = %s AND tb.token_id = %s
+            FOR UPDATE OF tb, u
             """,
             (request.user_id, request.token_id),
         )
         token_balance = cursor.fetchone()
 
-        if token_balance is None or token_balance["amount"] < request.amount: #type: ignore
-            available = token_balance["amount"] if token_balance else 0 #type: ignore
+        if token_balance is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The seller does not hold this token",
+            )
+        if not token_balance["identity_verified"]: # type: ignore
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="A verified user identity is required to list tokens",
+            )
+
+        cursor.execute(
+            """
+            SELECT COALESCE(SUM(offered_tokens), 0) AS reserved
+            FROM token_listings
+            WHERE tk_balance = %s
+              AND cancelled_at IS NULL
+              AND offered_tokens > 0
+            """,
+            (token_balance["id"],), # type: ignore
+        )
+        reserved = int(cursor.fetchone()["reserved"]) # type: ignore
+        available = int(token_balance["amount"]) - reserved # type: ignore
+        if available < request.amount:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
@@ -118,18 +179,38 @@ def purchase_listing(
                 seller_balance.amount AS seller_token_amount,
                 token.hedera_token_id,
                 token.project_id,
-                seller.hedera_id AS seller_hedera_id
+                seller.hedera_id AS seller_hedera_id,
+                buyer.identity_verified AS buyer_identity_verified,
+                EXISTS (
+                    SELECT 1
+                    FROM verifiable_credentials vc
+                    WHERE vc.subject_user_id = buyer.id
+                      AND vc.credential_type = 'InvestorVerification'
+                      AND vc.revoked_at IS NULL
+                      AND vc.expires_at > CURRENT_TIMESTAMP
+                ) AS buyer_investor_verified
             FROM token_listings AS listing
             JOIN token_balances AS seller_balance
                 ON seller_balance.id = listing.tk_balance
             JOIN tokens AS token ON token.id = seller_balance.token_id
             JOIN users AS seller ON seller.id = seller_balance.user_id
+            JOIN users AS buyer ON buyer.id = %s
             WHERE listing.id = %s
             FOR UPDATE OF listing, seller_balance
             """,
-            (request.listing_id,),
+            (request.user_id, request.listing_id),
         )
         listing = cursor.fetchone()
+        if listing is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Listing {request.listing_id} was not found",
+            )
+        if not listing["buyer_identity_verified"]: # type: ignore
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="A verified user identity is required to buy tokens",
+            )
         
 
         # Check if the seller doesn't want to sell their own listing
@@ -301,3 +382,40 @@ def purchase_listing(
         "transaction_id": transaction_id,
         "remaining_offered_tokens": updated_listing["offered_tokens"], #type: ignore
     }
+
+
+@router.delete("/list/{listing_id}", status_code=status.HTTP_204_NO_CONTENT)
+def cancel_listing(
+    listing_id: int,
+    user_id: int,
+    connection: Connection = Depends(get_db),
+):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT listing.id
+            FROM token_listings listing
+            JOIN token_balances tb ON tb.id = listing.tk_balance
+            WHERE listing.id = %s
+              AND tb.user_id = %s
+              AND listing.cancelled_at IS NULL
+              AND listing.offered_tokens > 0
+            FOR UPDATE OF listing
+            """,
+            (listing_id, user_id),
+        )
+        listing = cursor.fetchone()
+        if listing is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Active listing not found for this seller",
+            )
+        cursor.execute(
+            """
+            UPDATE token_listings
+            SET cancelled_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            """,
+            (listing_id,),
+        )
+    return None

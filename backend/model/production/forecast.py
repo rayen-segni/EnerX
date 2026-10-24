@@ -23,11 +23,12 @@ import requests
 # CONFIGURATION
 # ----------------------------------------------------------------------------
 HERE = os.path.dirname(os.path.abspath(__file__))
-BUNDLE_PATH = os.path.join(HERE, "solar_agent.pkl")
-REPORT_PATH = os.path.join(HERE, "forecast_report.json")
-TILTS_PATH = os.path.join(HERE, "pvgis_tilts.json")
-CALIB_PATH = os.path.join(HERE, "chain_calibration.json")
-LAST_FORECAST_PATH = os.path.join(HERE, "last_forecast_cache.json")   # plan B de la demo uniquement
+DATA_DIR = os.path.join(HERE, "data")
+BUNDLE_PATH = os.path.join(DATA_DIR, "solar_agent.pkl")
+REPORT_PATH = os.path.join(DATA_DIR, "forecast_report.json")
+TILTS_PATH = os.path.join(DATA_DIR, "pvgis_tilts.json")
+CALIB_PATH = os.path.join(DATA_DIR, "chain_calibration.json")
+LAST_FORECAST_PATH = os.path.join(DATA_DIR, "last_forecast_cache.json")   # plan B de la demo uniquement
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -48,6 +49,7 @@ TRAIN_LON = (8.13, 10.85)
 BOX_MARGIN = 0.5            # degres
 IRRADIANCE_MAX_OK = 9000    # entrainement : 546 a 8396 Wh/m2/jour
 MAX_RELIABLE_DAYS = 7
+PHYS_MAX_KWH_PER_KW = 7.2   # plafond physique : max PVGIS observe 6.87 kWh/kWp/jour (+5 %)
 REL_FLOOR_KWH = 5.0         # plancher du denominateur pour l'intervalle relatif (base 10 kW)
 
 VILLES = {
@@ -111,7 +113,7 @@ def fetch_hourly_forecast(lat, lon, days=7):
             derniere_erreur = e
             if essai < 2:
                 time.sleep(2 ** essai)
-    raise derniere_erreur #type: ignore
+    raise derniere_erreur
 
 
 def _cle_cache(lat, lon, days):
@@ -199,7 +201,7 @@ def interval_source():
 # ----------------------------------------------------------------------------
 # 4. PREDICTION AVEC LE MODELE ENTRAINE
 # ----------------------------------------------------------------------------
-def predict_days(daily, lat, lon, capacity_kw=10.0, bundle=None):
+def predict_days(daily, lat, lon, capacity_kw=10, bundle=None):
     b = bundle or joblib.load(BUNDLE_PATH)
     out = daily.copy()
     if len(out) == 0:
@@ -234,9 +236,12 @@ def predict_days(daily, lat, lon, capacity_kw=10.0, bundle=None):
         high = kwh + b["res_high"]
 
     scale = capacity_kw / b["base_capacity_kw"]
-    out["kwh"] = (kwh * scale).round(2)
-    out["low"] = (np.maximum(low, 0) * scale).round(2)
-    out["high"] = (np.maximum(high, 0) * scale).round(2)
+    cap = PHYS_MAX_KWH_PER_KW * capacity_kw          # une centrale ne peut pas depasser ce plafond
+    brut = kwh * scale
+    out["kwh"] = np.minimum(brut, cap).round(2)
+    out["low"] = np.minimum(np.maximum(low, 0) * scale, cap).round(2)
+    out["high"] = np.minimum(np.maximum(high, 0) * scale, cap).round(2)
+    out.attrs["n_capped"] = int((brut > cap).sum())
     out["temperature"] = out["temperature"].round(1)
     out["irradiance"] = out["irradiance"].round(0)
     return out
@@ -261,12 +266,12 @@ def build_report(nom, capacity_kw=10, days=7):
         "city": nom,
         "capacity_kw": capacity_kw,
         "unit": "kWh/day",
-        "model": "MLP 64-32 (sklearn), trained on PVGIS simulated data 2019-2023",
+        "model": "MLP 128-64-32 (sklearn), trained on PVGIS simulated data 2019-2023",
         "weather_source": "Open-Meteo forecast API",
         "interval": interval_source(),
         "forecast": [
-            {"date": r.date.strftime("%Y-%m-%d"), "kwh": r.kwh, "low": r.low, "high": r.high, #type: ignore
-                "temperature_c": r.temperature, "irradiance_wh_m2": r.irradiance}
+            {"date": r.date.strftime("%Y-%m-%d"), "kwh": r.kwh, "low": r.low, "high": r.high,
+             "temperature_c": r.temperature, "irradiance_wh_m2": r.irradiance}
             for r in pred.itertuples()
         ],
         "total_kwh_period": round(float(pred["kwh"].sum()), 2),

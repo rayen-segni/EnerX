@@ -1,13 +1,16 @@
 """
 Verifie que le hash Python et le hash JavaScript sont identiques, y compris pour de tres petits
 montants (cas qui donnait des hash differents avec l'ancienne regle : Python ecrit 1e-05).
-Usage : python test_hash.py     (necessite Node.js pour la comparaison JavaScript)
+Usage : python -m hedera.check_hash   (depuis la racine du projet)     (necessite Node.js pour la comparaison JavaScript)
 """
 import json
 import shutil
 import subprocess
 
-import model.aggregator as aggregator
+import os
+import tempfile
+
+from production import aggregator
 
 report = {
     "generated_at": "2026-10-06T10:00:00+00:00",
@@ -20,7 +23,9 @@ report = {
     "rien": None,
 }
 report["report_hash"] = aggregator.hash_report(report)
-with open("hash_test_report.json", "w", encoding="utf-8") as f:
+REPORT_FILE = os.path.join(tempfile.gettempdir(), "hash_test_report.json")
+VERIFY_JS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "verify_hash.js")
+with open(REPORT_FILE, "w", encoding="utf-8") as f:
     json.dump(report, f, ensure_ascii=False, indent=2)
 print("Hash Python :", report["report_hash"])
 
@@ -31,7 +36,7 @@ assert aggregator.hash_report(faux) != report["report_hash"], "falsification non
 print("Falsification detectee : OK")
 
 if shutil.which("node"):
-    r = subprocess.run(["node", "verify_hash.js", "hash_test_report.json"], capture_output=True, text=True)
+    r = subprocess.run(["node", VERIFY_JS, REPORT_FILE], capture_output=True, text=True)
     print(r.stdout.strip())
     raise SystemExit(r.returncode)
 print("Node.js absent : installe-le pour comparer avec JavaScript (https://nodejs.org)")

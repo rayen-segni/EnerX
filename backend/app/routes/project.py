@@ -18,7 +18,21 @@ def create_project(
 
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT hedera_id FROM users WHERE id = %s",
+            """
+            SELECT
+                hedera_id,
+                identity_verified,
+                EXISTS (
+                    SELECT 1
+                    FROM verifiable_credentials vc
+                    WHERE vc.subject_user_id = users.id
+                      AND vc.credential_type = 'ProjectOwnerVerification'
+                      AND vc.revoked_at IS NULL
+                      AND vc.expires_at > CURRENT_TIMESTAMP
+                ) AS owner_verified
+            FROM users
+            WHERE id = %s
+            """,
             (request.user_id,),
         )
         user = cursor.fetchone()
@@ -27,6 +41,11 @@ def create_project(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"User {request.user_id} was not found",
+            )
+        if not user["identity_verified"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="A verified user identity is required to create a project",
             )
 
         # Insert the project into the database.
