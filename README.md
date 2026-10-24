@@ -1,5 +1,25 @@
 # EnerX
 
+### Frameworks, technologies and languages
+
+[![Next.js 16.4.2](https://img.shields.io/badge/Next.js-16.4.2-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React 19.2.4](https://img.shields.io/badge/React-19.2.4-149ECA?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript 5.7.3](https://img.shields.io/badge/TypeScript-5.7.3-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS 4.3.3](https://img.shields.io/badge/Tailwind_CSS-4.3.3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![pnpm 12.3.4](https://img.shields.io/badge/pnpm-12.3.4-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI 0.142.2](https://img.shields.io/badge/FastAPI-0.142.2-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostgreSQL 18](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Hiero SDK 0.2.2](https://img.shields.io/badge/Hiero_SDK-0.2.2-8259EF)](https://github.com/hiero-ledger)
+[![Solidity 0.8.20+](https://img.shields.io/badge/Solidity-0.8.20%2B-363636?logo=solidity&logoColor=white)](https://soliditylang.org/)
+
+[![Alembic 1.20.0](https://img.shields.io/badge/Alembic-1.20.0-333333)](https://alembic.sqlalchemy.org/)
+[![psycopg 3.3.6](https://img.shields.io/badge/psycopg-3.3.6-336791)](https://www.psycopg.org/)
+[![scikit--learn 1.9.1](https://img.shields.io/badge/scikit--learn-1.9.1-F7931E?logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
+[![NumPy 2.5.4](https://img.shields.io/badge/NumPy-2.5.4-013243?logo=numpy&logoColor=white)](https://numpy.org/)
+[![pandas 3.0.6](https://img.shields.io/badge/pandas-3.0.6-150458?logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+
 EnerX is a solar-project crowdfunding and secondary-marketplace MVP. It brings
 together a Next.js dashboard, a FastAPI backend, PostgreSQL application data,
 Hedera token and file services, a smart-contract distribution record, and an
