@@ -90,7 +90,7 @@ export function HomeTab({ projects, history, onNavigate }: HomeTabProps) {
                 onClick={() => onNavigate('owner')}
                 className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-white backdrop-blur transition hover:border-azure/60 hover:text-azure"
               >
-                Tokenize a rooftop
+                Tokenize a project
               </button>
             </div>
           </div>
