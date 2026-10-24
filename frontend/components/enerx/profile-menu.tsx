@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, ChevronDown, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { Check, ChevronDown, Menu, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { KycRecord, Profile } from '@/lib/enerx/types'
 import { formatUSD } from '@/lib/enerx/utils'
@@ -52,10 +52,20 @@ export function ProfileMenu({ profiles, activeProfile, kycRecords, onChange }: P
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-slate-900/80 py-1.5 pr-2.5 pl-1.5 text-left transition hover:border-white/20"
+        aria-label={`Select user, current user: ${activeProfile.name}`}
+        className="flex items-center justify-center rounded-xl border border-white/10 bg-slate-900/80 p-2.5 text-left transition hover:border-white/20 sm:hidden"
+      >
+        <Menu className="size-5 text-slate-300" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="hidden items-center gap-2.5 rounded-xl border border-white/10 bg-slate-900/80 py-1.5 pr-2.5 pl-1.5 text-left transition hover:border-white/20 sm:flex"
       >
         <Avatar profile={activeProfile} />
-        <span className="hidden flex-col leading-tight sm:flex">
+        <span className="flex flex-col leading-tight">
           <span className="text-sm font-medium text-white">{activeProfile.name}</span>
           <span className="font-mono text-[11px] text-slate-400">
             {activeProfile.role} · {formatUSD(activeProfile.balance, 0)}
@@ -67,7 +77,7 @@ export function ProfileMenu({ profiles, activeProfile, kycRecords, onChange }: P
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-2xl backdrop-blur-xl"
+          className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-2xl backdrop-blur-xl"
         >
           <p className="border-b border-white/10 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
             MVP users · backend IDs 1–3
