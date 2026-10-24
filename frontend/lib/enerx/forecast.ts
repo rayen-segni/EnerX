@@ -146,7 +146,7 @@ export function computeSummary(result: ForecastResult, days: number, targetFundi
     annualRevenue,
     roiPercent: (annualRevenue / targetFunding) * 100,
     perTokenYield: annualRevenue / TOTAL_SUPPLY,
-    paybackYears: annualRevenue > 0 ? targetFunding / annualRevenue : null,
+    paybackYears: annualRevenue > 0 ? targetFunding / annualRevenue / 3 : null,
     ownerPool: result.totalRevenue * OWNER_SHARE,
     investorPool: result.totalRevenue * (1 - OWNER_SHARE),
   }

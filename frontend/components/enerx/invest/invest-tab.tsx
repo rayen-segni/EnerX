@@ -1,25 +1,17 @@
 import { ShieldAlert, ShieldCheck, Wallet } from 'lucide-react'
-import type { Holdings, KycRecord, Listing, Profile, Project } from '@/lib/enerx/types'
+import type { Holdings, KycRecord, Profile, Project } from '@/lib/enerx/types'
 import { formatUSD, tokenPrice } from '@/lib/enerx/utils'
 import { Panel, SectionHeader } from '../primitives'
 import { CampaignCard } from './campaign-card'
-import { SecondaryMarket } from './secondary-market'
 
 interface InvestTabProps {
   projects: Project[]
-  profiles: Profile[]
   activeProfile: Profile
   kyc: KycRecord
   holdings: Holdings
-  listings: Listing[]
   pendingBuyProjectId: string | null
-  pendingListingId: string | null
-  isCreatingListing: boolean
   onOpenKyc: () => void
   onBuyPrimary: (projectId: string, quantity: number) => void
-  onCreateListing: (projectId: string, amount: number, unitPrice: number) => void
-  onBuyListing: (listingId: string) => void
-  onCancelListing: (listingId: string) => void
 }
 
 function DidBadge({ kyc, onOpenKyc }: { kyc: KycRecord; onOpenKyc: () => void }) {
@@ -64,9 +56,9 @@ export function InvestTab(props: InvestTabProps) {
     <div className="enerx-grid-bg">
       <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-10 md:px-6 md:py-14">
         <SectionHeader
-          eyebrow="Primary & secondary markets"
+          eyebrow="Primary market"
           title="Invest in tokenized solar"
-          description="Each installation mints exactly 100 HTS tokens (0 decimals · 1 token = 1% ownership). Verified Users can buy and sell P2P allocations."
+          description="Each installation mints exactly 100 HTS tokens (0 decimals · 1 token = 1% ownership). Verified users can buy tokens in primary campaigns."
           action={<DidBadge kyc={kyc} onOpenKyc={onOpenKyc} />}
         />
 
@@ -115,21 +107,6 @@ export function InvestTab(props: InvestTabProps) {
             )}
           </div>
         </section>
-
-        <SecondaryMarket
-          projects={projects}
-          profiles={props.profiles}
-          activeProfile={activeProfile}
-          verified={kyc.verified}
-          holdings={holdings}
-          listings={props.listings}
-          pendingListingId={props.pendingListingId}
-          isCreatingListing={props.isCreatingListing}
-          onCreateListing={props.onCreateListing}
-          onBuyListing={props.onBuyListing}
-          onCancelListing={props.onCancelListing}
-          onOpenKyc={onOpenKyc}
-        />
       </div>
     </div>
   )

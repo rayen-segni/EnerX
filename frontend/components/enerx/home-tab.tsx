@@ -19,7 +19,7 @@ const QUICK_ACTIONS: {
   {
     tab: 'invest',
     title: 'Invest in rooftops',
-    description: 'Buy fractional HTS tokens in primary campaigns or trade peer-to-peer.',
+    description: 'Buy fractional HTS tokens in primary campaigns.',
     icon: TrendingUp,
     accent: 'text-solar ring-solar/40 bg-solar/10',
   },

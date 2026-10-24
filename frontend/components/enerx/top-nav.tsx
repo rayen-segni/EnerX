@@ -1,13 +1,16 @@
 'use client'
 
-import { BrainCircuit, Building2, Home, TrendingUp, Zap } from 'lucide-react'
+import Image from 'next/image'
+import { BrainCircuit, Building2, Home, Store, TrendingUp } from 'lucide-react'
 import type { KycRecord, Profile, TabId } from '@/lib/enerx/types'
 import { cn } from '@/lib/utils'
 import { ProfileMenu } from './profile-menu'
+import enerxLogo from '../../enerx.png'
 
 const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'invest', label: 'Invest', icon: TrendingUp },
+  { id: 'marketplace', label: 'Marketplace', icon: Store },
   { id: 'owner', label: 'Operate', icon: Building2 },
   { id: 'ai', label: 'AI Predictor', icon: BrainCircuit },
 ]
@@ -57,9 +60,7 @@ export function TopNav({ activeTab, onTabChange, profiles, activeProfile, kycRec
           className="flex items-center gap-2.5"
           aria-label="EnerX home"
         >
-          <span className="flex size-9 items-center justify-center rounded-lg bg-solar/15 ring-1 ring-solar/50 shadow-[0_0_20px_rgba(255,102,34,0.35)]">
-            <Zap className="size-5 fill-solar text-solar" aria-hidden />
-          </span>
+          <Image src={enerxLogo} alt="EnerX logo" width={30} height={38} priority className="h-9 w-auto object-contain" />
           <span className="text-xl font-bold tracking-tight text-white">
             Ener<span className="text-solar">X</span>
           </span>

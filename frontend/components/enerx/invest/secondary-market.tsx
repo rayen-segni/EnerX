@@ -61,7 +61,7 @@ export function SecondaryMarket({
     <section aria-labelledby="secondary-heading" className="flex flex-col gap-5">
       <div className="flex items-baseline justify-between">
         <h3 id="secondary-heading" className="flex items-center gap-2 text-xl font-semibold text-white">
-          <ArrowLeftRight className="size-5 text-azure" aria-hidden /> Secondary market
+          <ArrowLeftRight className="size-5 text-azure" aria-hidden /> Marketplace
         </h3>
         <p className="font-mono text-xs text-slate-500">Peer-to-peer · atomic HTS swap</p>
       </div>

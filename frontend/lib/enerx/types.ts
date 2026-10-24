@@ -1,4 +1,4 @@
-export type TabId = 'home' | 'invest' | 'owner' | 'ai'
+export type TabId = 'home' | 'invest' | 'marketplace' | 'owner' | 'ai'
 
 export type Role = 'User'
 

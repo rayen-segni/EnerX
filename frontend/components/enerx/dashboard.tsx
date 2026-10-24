@@ -43,6 +43,7 @@ import { AiPredictorTab } from './ai/ai-predictor-tab'
 import { HomeTab } from './home-tab'
 import { InvestTab } from './invest/invest-tab'
 import { KycModal } from './invest/kyc-modal'
+import { SecondaryMarket } from './invest/secondary-market'
 import { OwnerTab } from './owner/owner-tab'
 import { ToastStack } from './toast-stack'
 import { TopNav } from './top-nav'
@@ -681,20 +682,33 @@ export function EnerxDashboard() {
         {activeTab === 'invest' && (
           <InvestTab
             projects={projects}
-            profiles={profiles}
             activeProfile={activeProfile}
             kyc={activeKyc}
             holdings={holdings}
-            listings={listings}
             pendingBuyProjectId={pendingBuyProjectId}
-            pendingListingId={pendingListingId}
-            isCreatingListing={isCreatingListing}
             onOpenKyc={() => setIsKycModalOpen(true)}
             onBuyPrimary={handleBuyPrimary}
-            onCreateListing={handleCreateListing}
-            onBuyListing={handleBuyListing}
-            onCancelListing={handleCancelListing}
           />
+        )}
+        {activeTab === 'marketplace' && (
+          <div className="enerx-grid-bg">
+            <div className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-14">
+              <SecondaryMarket
+                projects={projects}
+                profiles={profiles}
+                activeProfile={activeProfile}
+                verified={activeKyc.verified}
+                holdings={holdings}
+                listings={listings}
+                pendingListingId={pendingListingId}
+                isCreatingListing={isCreatingListing}
+                onCreateListing={handleCreateListing}
+                onBuyListing={handleBuyListing}
+                onCancelListing={handleCancelListing}
+                onOpenKyc={() => setIsKycModalOpen(true)}
+              />
+            </div>
+          </div>
         )}
         {activeTab === 'owner' && (
           <OwnerTab
